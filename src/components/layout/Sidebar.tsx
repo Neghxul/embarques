@@ -1,5 +1,6 @@
 // src/components/layout/Sidebar.tsx
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Ship, Package, Users, Home, FileText } from 'lucide-react';
 
 // Componente de navegación individual para reutilizar
@@ -42,7 +43,7 @@ const Sidebar = () => {
       </div>
       <nav className="flex-1 px-3 py-4">
         <ul className="space-y-1">
-          <NavItem href="/pedidos" icon={FileText} label="Pedidos" />
+          <NavItem href="/orders" icon={FileText} label="Pedidos" />
           <NavItem href="/embarques" icon={Ship} label="Embarques" />
           <NavItem href="/clientes" icon={Users} label="Clientes" />
           <NavItem href="/productos" icon={Package} label="Productos" />
