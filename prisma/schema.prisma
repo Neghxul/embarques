@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Usa esta línea si planeas usar Prisma Accelerate o Pulse en el futuro
+  // directUrl = env("DIRECT_URL") 
+}
+
+// Modelo para Usuarios y Roles
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String   // Se guardará el hash, no la contraseña en texto plano
+  role      Role     @default(VENDEDOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[] // Un vendedor puede tener muchas órdenes
+  customers Customer[]
+}
+
+enum Role {
+  ADMIN
+  VENDEDOR
+  SUPERVISOR
+  ALMACEN
+}
+
+// Modelo para el catálogo de Clientes
+model Customer {
+  id          String   @id @default(cuid())
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  // Dirección de envío
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  country     String?  @default("Mexico")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendedorId  String   // <-- AÑADIR ESTA LÍNEA
+  vendedor    User     @relation(fields: [vendedorId], references: [id]) // <-- AÑADIR ESTA LÍNEA
+
+
+  orders Order[]
+}
+
+// Modelo para el catálogo de Productos
+model Product {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  description String
+  stock       Int     @default(0)
+  cost        Float?  // Campo añadido
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+}
+
+// Modelo para los Pedidos (la hoja de embarque inicial)
+model Order {
+  id            String      @id @default(cuid())
+  consecutive   Int         @unique @default(autoincrement())
+  orderDate     DateTime    @default(now())
+  purchaseOrder String?
+  invoice       String?
+  rev           String?     // Campo añadido
+  status        OrderStatus @default(PENDIENTE)
+  totalAmount   Float?
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  vendedorId String? // Campo añadido, opcional por ahora
+  vendedor   User?   @relation(fields: [vendedorId], references: [id])
+  
+  items      OrderItem[]
+  shipment   Shipment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  unitPrice Float
+  
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade) // Borrado en cascada
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+}
+
+enum OrderStatus {
+  PENDIENTE
+  EN_PREPARACION
+  LISTO_PARA_EMBARQUE
+  EMBARCADO
+  CONCLUIDO
+  CANCELADO
+}
+
+// Modelo para los detalles del Embarque
+model Shipment {
+  id                 String    @id @default(cuid())
+  shippingProvider   String?   // Paquetería: FedEx, DHL, etc.
+  trackingNumber     String?   // Guía
+  trackingUrl        String?   // Link de rastreo generado
+  guideFileUrl       String?   // URL de la foto/PDF de la guía
+  merchandisePhotoUrl String?   // URL de la foto de la mercancía
+
+  orderId            String    @unique // Cada orden tiene un solo embarque
+  order              Order     @relation(fields: [orderId], references: [id])
+
+  createdAt          DateTime  @default(now())
+  shippedAt          DateTime? // Fecha en que se embarcó
+}
